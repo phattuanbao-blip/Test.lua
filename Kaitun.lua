@@ -1,21 +1,22 @@
--- [[ KAITUN ULTIMATE EDITION - SYNCED WITH DATA FILE ]]
 repeat task.wait() until game:IsLoaded()
 
--- [ 1. KHỞI TẠO BIẾN HỆ THỐNG ]
+-- [ 1. HỆ THỐNG BIẾN & THIẾT LẬP ]
 do
     ply = game.Players
     plr = ply.LocalPlayer
-    Root = plr.Character.HumanoidRootPart
     replicated = game:GetService("ReplicatedStorage")
     TW = game:GetService("TweenService")
     Enemies = workspace.Enemies
+    vim1 = game:GetService("VirtualInputManager")
     World1 = game.PlaceId == 2753915549
     World2 = game.PlaceId == 4442272183
     World3 = game.PlaceId == 7449423635
     Sec = 0.1
+    _G.AutoFarm = true
+    _G.SelectWeapon = "Melee" -- Có thể đổi thành "Sword" hoặc "Blox Fruit"
 end
 
--- [ 2. TRÍCH XUẤT DATA TỌA ĐỘ (POSMSLIST) TỪ FILE ]
+-- [ 2. DATA TỌA ĐỘ TRÍCH XUẤT TỪ FILE ]
 local PosMsList = {
     ["Pirate Millionaire"] = CFrame.new(-712.827, 98.577, 5711.954),
     ["Pistol Billionaire"] = CFrame.new(-723.433, 147.429, 5931.993),
@@ -46,43 +47,28 @@ local PosMsList = {
     ["Cocoa Warrior"] = CFrame.new(95, 73, -12309),
     ["Chocolate Bar Battler"] = CFrame.new(647, 42, -12401),
     ["Sweet Thief"] = CFrame.new(116, 36, -12478),
-    ["Candy Rebel"] = CFrame.new(47, 61, -12889)
-} [cite: 246, 247, 248, 249, 250]
+    ["Candy Rebel"] = CFrame.new(47, 61, -12889),
+    ["Ghost"] = CFrame.new(5251, 5, 1111)
+}
 
--- [ 3. HÀM TWEEN BYPASS (BLOCK METHOD) ]
+-- [ 3. HÀM DI CHUYỂN & CHIẾN ĐẤU ]
 local block = Instance.new("Part", workspace)
 block.Size = Vector3.new(1, 1, 1)
-block.Name = "Bypass_Part"
 block.Anchored = true
 block.CanCollide = false
-block.Transparency = 1 [cite: 315]
+block.Transparency = 1
 
 function _tp(target)
     pcall(function()
         local distance = (target.Position - block.Position).Magnitude
-        local speed = 300
-        local tweenInfo = TweenInfo.new(distance / speed, Enum.EasingStyle.Linear)
+        local tweenInfo = TweenInfo.new(distance / 300, Enum.EasingStyle.Linear)
         TW:Create(block, tweenInfo, {CFrame = target}):Play()
-        plr.Character.HumanoidRootPart.CFrame = block.CFrame
-    end)
-end [cite: 324]
-
--- [ 4. LOGIC NHẬN NHIỆM VỤ (QUEST CHECK) ]
-function GetQuest()
-    local a = plr.Data.Level.Value
-    if World3 then
-        if a >= 1500 and a <= 1574 then
-            return "MarineQuest2", 1, "Pirate Millionaire"
-        elseif a >= 1575 and a <= 1624 then
-            return "MarineQuest2", 2, "Pistol Billionaire"
-        elseif a >= 1800 and a <= 1849 then
-            return "DeepForestQuest", 1, "Forest Pirate"
+        if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+            plr.Character.HumanoidRootPart.CFrame = block.CFrame
         end
-    end
-    -- Bạn có thể thêm các mốc Level khác tương tự dựa trên logic trong file [cite: 61, 62]
+    end)
 end
 
--- [ 5. HÀM CHIẾN ĐẤU (KILL & BRING ENEMY) ]
 function BringEnemy(PosMon)
     for _, v in pairs(workspace.Enemies:GetChildren()) do
         if v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 then
@@ -93,19 +79,28 @@ function BringEnemy(PosMon)
             end
         end
     end
-end [cite: 270, 271]
+end
 
--- [ 6. VÒNG LẶP CHÍNH (MAIN ENGINE) ]
-_G.AutoFarm = true
-_G.SelectWeapon = "Melee"
+-- [ 4. HỆ THỐNG NHẬN NHIỆM VỤ ]
+function GetQuest()
+    local a = plr.Data.Level.Value
+    if World3 then
+        if a >= 1500 and a <= 1574 then return "MarineQuest2", 1, "Pirate Millionaire"
+        elseif a >= 1575 and a <= 1624 then return "MarineQuest2", 2, "Pistol Billionaire"
+        elseif a >= 1800 and a <= 1849 then return "DeepForestQuest", 1, "Forest Pirate"
+        -- Tự động thêm các mốc level khác từ file nếu cần
+        else return "MarineQuest2", 1, "Pirate Millionaire" end
+    end
+end
 
+-- [ 5. VÒNG LẶP CHÍNH ]
 spawn(function()
     while task.wait() do
         if _G.AutoFarm then
             pcall(function()
                 if not plr.PlayerGui.Main.Quest.Visible then
                     local QName, QID, MobName = GetQuest()
-                    local PosQ = PosMsList[MobName] -- Sử dụng data tọa độ từ file
+                    local PosQ = PosMsList[MobName]
                     if PosQ then
                         _tp(PosQ)
                         replicated.Remotes.CommF_:InvokeServer("StartQuest", QName, QID)
@@ -115,18 +110,18 @@ spawn(function()
                     local v = workspace.Enemies:FindFirstChild(MobName) or workspace:FindFirstChild(MobName)
                     
                     if v and v:FindFirstChild("HumanoidRootPart") and v.Humanoid.Health > 0 then
-                        PosMon = v.HumanoidRootPart.Position
+                        local PosMon = v.HumanoidRootPart.Position
                         BringEnemy(PosMon)
                         _tp(v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
                         
-                        -- Tự động đánh
+                        -- Tấn công
                         local tool = plr.Backpack:FindFirstChild(_G.SelectWeapon) or plr.Character:FindFirstChild(_G.SelectWeapon)
                         if tool then 
                             plr.Character.Humanoid:EquipTool(tool)
                             game:GetService("VirtualUser"):Button1Down(Vector2.new(1280, 672))
                         end
                     else
-                        _tp(PosMsList[MobName])
+                        if PosMsList[MobName] then _tp(PosMsList[MobName]) end
                     end
                 end
             end)
@@ -134,14 +129,14 @@ spawn(function()
     end
 end)
 
--- [ 7. TỐI ƯU HÓA HỆ THỐNG ]
+-- [ 6. TỐI ƯU HÓA & TIỆN ÍCH ]
 spawn(function()
     while task.wait(5) do
-        -- Tăng điểm stats tự động [cite: 267, 268]
+        -- Tự tăng Stats: Melee và Defense
         replicated.Remotes.CommF_:InvokeServer("AddPoint", "Melee", 3)
         replicated.Remotes.CommF_:InvokeServer("AddPoint", "Defense", 3)
         
-        -- Cất trái ác quỷ tự động [cite: 301]
+        -- Cất trái ác quỷ
         for _, item in pairs(plr.Backpack:GetChildren()) do
             if item.Name:find("Fruit") then
                 replicated.Remotes.CommF_:InvokeServer("StoreFruit", item.Name, item)
@@ -149,7 +144,3 @@ spawn(function()
         end
     end
 end)
-
-print("------------------------------------------")
-print("SCIPT ĐÃ GỘP DATA VÀ FIX LỖI TỌA ĐỘ")
-print("------------------------------------------")
